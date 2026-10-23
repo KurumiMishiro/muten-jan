@@ -35,7 +35,8 @@ button{font-family:inherit;cursor:pointer}
 #bar button:disabled{opacity:.32;cursor:default}
 #bar button.glow{border-color:#ffcf5a;background:linear-gradient(#7a5410,#3d2a06);animation:pulse 0.9s infinite alternate}
 #bar button.on{border-color:#ff6b6b;background:linear-gradient(#7a1c1c,#3d0d0d)}
-@keyframes pulse{to{box-shadow:0 0 18px #ffcf5a}}
+@keyframes pulse{from{box-shadow:inset 0 0 0 2px rgba(255,207,90,.55),0 3px 8px rgba(0,0,0,.5)}to{box-shadow:inset 0 0 0 2px #ffcf5a,0 0 9px 1px rgba(255,207,90,.8)}}
+#bar button,#bar button.glow,#bar button.on,#bar button:active{transform:none;transition:none;flex:none}
 .plate{position:absolute;background:rgba(8,12,22,.8);border:1px solid #33415f;border-radius:10px;padding:6px 10px;min-width:170px;font-size:13px}
 .plate.turn{border-color:#ffcf5a;box-shadow:0 0 12px rgba(255,207,90,.5)}
 #plate1{left:calc(50% + 40px);top:10px}
@@ -104,7 +105,7 @@ html.touch .opt input{width:20px;height:20px}
 html.touch input[name=name]{font-size:16px}
 html.touch #errbox{bottom:calc(var(--strip,20%) + 8px)}
 /* 横向き・高さが低い画面（スマホ横） */
-@media (max-height:560px){
+@media (max-height:560px) and (orientation:landscape){
   #info{left:8px;top:6px;padding:4px 8px;font-size:11px;line-height:1.35;min-width:0}
   #info .ti{height:26px}
   .stk{width:24px;height:5px}
@@ -142,8 +143,9 @@ html.touch #errbox{bottom:calc(var(--strip,20%) + 8px)}
   .plate .pts{font-size:15px}.chip{font-size:11px;padding:2px 6px}.ti.sm{height:24px}
   #plate2{left:8px;right:auto;top:86px}#plate1{right:8px;left:auto;top:86px}
   #plate0{bottom:calc(var(--strip,20%) + 4px);padding:2px 10px}#plate0 .pts{font-size:14px}
-  #bar{left:6px;top:auto;bottom:calc(var(--strip,20%) + 40px);transform:none;display:grid;grid-template-columns:repeat(7,1fr);gap:5px;right:6px}
-  #bar button,html.touch #bar button{width:auto;height:52px;font-size:22px;border-radius:12px}
+  #bar{left:6px;top:auto;bottom:calc(var(--strip,20%) + 40px);transform:none;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;right:6px}
+  #bar button,html.touch #bar button{width:auto;min-width:0;height:52px;font-size:22px;border-radius:12px;padding:0}
+  #msg{left:50%}
   #bar button small{font-size:9px}
   #msg{bottom:calc(var(--strip,20%) + 100px);width:94vw}
   #msg .m{font-size:12px;white-space:normal;text-align:center;padding:5px 12px}
@@ -156,7 +158,41 @@ html.touch #errbox{bottom:calc(var(--strip,20%) + 8px)}
   #rotHint{top:calc(env(safe-area-inset-top,0px) + 150px)}
 }
 .modal .box>.btns:last-child{position:sticky;bottom:-12px;padding:8px 0 4px;background:linear-gradient(rgba(15,21,38,0),#0f1526 40%)}
-@media (max-height:560px){ html.touch .opt{min-height:30px} .storeNote{margin-top:4px} }
+@media (max-height:560px) and (orientation:landscape){ html.touch .opt{min-height:30px} .storeNote{margin-top:4px} }
+
+/* 小さい画面：ボタンは大きさを変えず、必ず画面内に収める */
+.btns{flex-wrap:wrap}
+.reveal .row{flex-wrap:wrap}.reveal .tiles{display:inline-flex;flex-wrap:wrap;align-items:center}
+@media (orientation:portrait) and (max-width:359px){
+  #bar{grid-template-columns:repeat(4,minmax(0,1fr))}
+  #msg{bottom:calc(var(--strip,20%) + 158px)}
+  #hint{bottom:calc(var(--strip,20%) + 206px)}
+  .plate{font-size:10px}.plate .pts{font-size:13px}.chip{font-size:10px;padding:2px 4px}
+  #plate2,#plate1{top:80px}
+  .title-logo{font-size:42px}.title-sub{font-size:12px}
+  .ttl{font-size:18px}
+  .reveal .lbl{width:auto;min-width:60px}.ti.sm{height:22px}
+  .btns button{min-width:96px;padding:9px 12px}
+}
+@media (orientation:portrait) and (max-height:600px){
+  #plate2,#plate1{top:74px}
+  .plate .la .ti.sm{height:20px}
+}
+@media (orientation:landscape) and (max-height:430px){
+  #bar{grid-template-columns:repeat(3,auto);gap:5px}
+  #bar button,html.touch #bar button{width:50px;height:46px;font-size:21px}
+  #info .ti{height:22px}
+  .reveal{font-size:11px}.ti.sm{height:22px}
+}
+@media (orientation:landscape) and (max-height:340px){
+  #info{font-size:10px}
+  #bar button,html.touch #bar button{width:48px;height:44px;font-size:20px}
+  #bar button small{font-size:8px;margin-top:1px}
+  #topr button,html.touch #topr button{width:40px;height:40px}
+}
+@media (max-width:400px){ input[type=range]{width:130px} .set input[name=name]{max-width:100%;width:180px} .storeNote{word-break:break-all} }
+@media (max-width:400px){ .opt{white-space:normal} .set{grid-template-columns:minmax(0,1fr)} }
+@media (orientation:landscape) and (max-height:560px){ #plate1,#plate2{max-width:calc(50% - 124px)} #plate1 .la,#plate2 .la{gap:3px} }
 </style></head>
 <body>
 <script>
