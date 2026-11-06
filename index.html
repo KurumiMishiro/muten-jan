@@ -4201,4 +4201,191 @@ ${ri?"タップで選ぶ→もう一度タップで打牌（別の牌をタッ�
    <div class="btns col"><button class="primary big" id="go">対局をはじめる</button><button id="st">設定</button><button id="hp">遊び方</button></div>`,"title");t.querySelectorAll("input[name=rule]").forEach(e=>e.onchange=()=>{Ht.rule=e.value,wi(Ht),$t.play("tick")}),t.querySelector("#go").onclick=()=>{Hs(),$t.play("discard");let e=t.querySelector("input[name=rule]:checked");e&&(Ht.rule=e.value,wi(Ht)),t.remove(),zh()},t.querySelector("#st").onclick=kh,t.querySelector("#hp").onclick=J0}async function zh(i){let t=Ce.default.MODES.includes(Ht.rule)?Ht.rule:"muten",e=Ce.default.makeRules(t).n,n=[Ht.name,"CPU 東雲","CPU 小夜","CPU 朝凪"].slice(0,e),s=n.map((a,o)=>o===0);gt=new S0(t,{names:n,human:s,hooks:{onEvent:W0},seed:i}),at.setSeats(e),document.documentElement.classList.toggle("four",e===4),["plate0","plate1","plate2","plate3"].forEach((a,o)=>{Re("#"+a).hidden=o>=e});let r=n.map((a,o)=>o===0?G0:Ch);try{await gt.playGame(r)}catch(a){console.error(a),alert("エラー："+a.message)}}var Q0=i=>new Promise(t=>setTimeout(t,i));async function j0(){let i=null;for(let t=0;t<6;t++)try{return Re("#stage").innerHTML="",new $r(Re("#stage"),Ht,$t)}catch(e){i=e,console.warn("WebGL retry",t,e),await Q0(400+t*300)}throw Sh(i&&i.message||i),i}async function t_(){try{await vh()}catch{}let i={};try{i=await xh()}catch{i={}}let t=i&&typeof i=="object"&&Object.keys(i).length>0;t&&i.waitAssist===void 0&&(i.waitAssist=i.hints!==!1&&i.hint!==!1),Ht=Object.assign({},Ih,ri?{quality:"low"}:{},t?i:{}),Object.defineProperty(Ht,"_coarse",{value:ri,enumerable:!1}),ri&&document.documentElement.classList.add("touch");try{$t=fh(Ht)}catch(n){console.warn(n),$t={play(){},setVol(){},setVolume(){},resume(){}}}try{vn=mh($t,Ht)}catch(n){console.warn(n),vn={refresh(){},cycle(){return 0},name(){return"オフ"}}}at=await j0(),at.drawPanel(null),H0(),z0(),V0(),Re("#btnExit").onclick=()=>{let n=ai(`<div class="ttl">終了しますか？</div><div class="btns"><button id="y" class="primary">${dl()?"アプリを終了":"タイトルへ戻る"}</button><button id="n">キャンセル</button></div>`);n.querySelector("#n").onclick=()=>n.remove(),n.querySelector("#y").onclick=()=>{Mh()||(n.remove(),location.reload())}},Re("#btnSet").onclick=kh;let e=()=>{let n=Re("#btnBgm"),s=Ht.bgm|0;n.classList.toggle("off",!s),n.innerHTML="♪"+(s?"<small>"+s+"</small>":""),n.title="BGM："+vn.name(s)+"（押すと切り替え）"};e(),Re("#btnBgm").onclick=()=>{Hs();let n=vn.cycle();wi(Ht),e(),dn(n?"BGM　♪"+n+"「"+vn.name(n)+"」":"BGM オフ","round")},window.__mt={get g(){return gt},get bgm(){return vn},ui:Z,get tb(){return at},answer:cs,tryDiscard:ml,autoSort:Fh,layout:le,finish:n=>Qr(n),start:(n,s)=>{s&&(Ht.rule=s),document.querySelector(".modal.title")?.remove(),zh(n)},chooseChi:Oh,CPU:Ch,MJ:Ce.default,get settings(){return Ht},save:()=>wi(Ht),native:()=>dl(),store:()=>fl(),renderHUD:Ze,drawPanel:xl,coarse:ri},Bh(),window.__mtBootOK&&window.__mtBootOK(),yh()}function Rh(){t_().catch(i=>{console.error(i),window.__mtReport&&window.__mtReport("起動: "+(i&&(i.stack||i.message)||i)),window.__mtBootFail&&window.__mtBootFail(String(i&&i.message||i))})}document.readyState==="loading"?window.addEventListener("DOMContentLoaded",Rh):Rh();})();
 </script>
 <script>if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});}</script>
+<script>
+/* ============================================================
+   無聴雀 オートモード層 (additive layer by Patra)
+   ------------------------------------------------------------
+   ベース（無聴雀本体）のコードは一切変更していない。
+   このスクリプトを本体の後ろに読み込むだけで動作する追加層。
+
+   仕組み:
+   - 本体が公開している window.__mt API だけを使う。
+   - 自席（seat 0）の判断ポイント（打牌待ち = ui.pend、
+     鳴き/ロン確認 = ui.ask）を監視し、ON の間だけ
+     本体付属の CPU（__mt.CPU … 他のCPU席と全く同じ思考）に
+     判断させ、その結果を人間の操作と同じ経路
+     （tryDiscard / finish / answer）で返す。
+   - 理牌（__mt.autoSort）は絶対に呼ばない。ドラッグ並べ替えも
+     しない。よって自席の手牌はツモった順のまま並ぶ（理牌なし）。
+   - 設定は本体の設定モーダルに「オートモード」の行を後付けで
+     挿入する。本体の設定データ（Ht）には触れず、この層専用の
+     localStorage キーにだけ保存する。
+   ============================================================ */
+(function () {
+  "use strict";
+  if (window.__mtAutoLayer) return;
+  window.__mtAutoLayer = true;
+
+  var LS_KEY = "mutenjan_auto_v1";
+  var auto = false;
+  try { auto = localStorage.getItem(LS_KEY) === "1"; } catch (e) {}
+
+  function mt() { return window.__mt || null; }
+  function saveAuto() { try { localStorage.setItem(LS_KEY, auto ? "1" : "0"); } catch (e) {} }
+  function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  function speedFactor() {
+    var M = mt(), s = M && M.settings ? M.settings.speed : "normal";
+    return s === "slow" ? 1.5 : s === "fast" ? 0.55 : 1;
+  }
+
+  /* ---------- 自席の判断を CPU に委ねる ---------- */
+  var busy = false;
+  var seenPend = null;
+  var seenAsk = null;
+
+  async function actOnPend(pendFn) {
+    await wait(650 * speedFactor());
+    var M = mt();
+    if (!auto || !M || !M.g || M.ui.pend !== pendFn) { if (M && M.ui.pend === pendFn) seenPend = null; return; }
+    var g = M.g;
+    if (!g.players || !g.players[0] || !g.players[0].human) return;
+    var action = null;
+    try { action = M.CPU.turn(g, 0); } catch (e) { return; }
+    if (!action) return;
+    var ui = M.ui;
+    try {
+      if (action.type === "discard") {
+        ui.riichiMode = action.riichi ? (action.open ? "open" : "closed") : false;
+        ui.sel = null;
+        var ok = M.tryDiscard(action.id);
+        if (!ok) { ui.riichiMode = false; M.finish(action); }
+      } else if (action.type === "tsumo") {
+        M.finish({ type: "tsumo" });
+      } else if (action.type === "ankan" || action.type === "kakan") {
+        M.finish({ type: action.type, t: action.t });
+      } else {
+        M.finish(action);
+      }
+    } catch (e) {}
+  }
+
+  async function actOnAsk(ask) {
+    await wait(550 * speedFactor());
+    var M = mt();
+    if (!auto || !M || !M.g || M.ui.ask !== ask) { if (M && M.ui.ask === ask) seenAsk = null; return; }
+    var g = M.g, opt = ask.opt || {};
+    try {
+      if (ask.kind === "ron") {
+        /* 本体CPUは常時ロン（CPU.ron() は常に true） */
+        M.answer(true);
+      } else if (ask.kind === "call") {
+        var res = M.CPU.call(g, 0, opt.id, { pon: !!opt.pon, kan: !!opt.kan, chi: opt.chi || [] });
+        M.answer(res == null ? false : res);
+      } else if (ask.kind === "confirm") {
+        var msg = ask.msg || "";
+        if (msg.indexOf("九種九牌") >= 0) {
+          var hand = (g.players[0] && g.players[0].hand) || [];
+          var kinds = {};
+          for (var i = 0; i < hand.length; i++) {
+            var t = M.MJ.T(hand[i]);
+            if (t % 9 === 0 || t % 9 === 8 || t >= 27) kinds[t] = 1;
+          }
+          M.answer(!!M.CPU.kyushu(g, 0, Object.keys(kinds).length));
+        } else {
+          var r = true;
+          try { r = !!M.CPU.nagashi(g, 0); } catch (e) {}
+          M.answer(r);
+        }
+      }
+    } catch (e) {}
+  }
+
+  setInterval(function () {
+    var M = mt();
+    if (!M || !M.ui) return;
+    var ui = M.ui;
+    if (!ui.pend) seenPend = null;
+    if (!ui.ask) seenAsk = null;
+    if (!auto || busy) return;
+    if (ui.pend && ui.pend !== seenPend) {
+      seenPend = ui.pend;
+      busy = true;
+      actOnPend(ui.pend).then(function () { busy = false; }, function () { busy = false; });
+    } else if (ui.ask && ui.ask !== seenAsk) {
+      seenAsk = ui.ask;
+      busy = true;
+      actOnAsk(ui.ask).then(function () { busy = false; }, function () { busy = false; });
+    }
+  }, 120);
+
+  /* ---------- 設定モーダルへ「オートモード」行を後付け ---------- */
+  function syncChk() {
+    var c = document.querySelector("#mtAutoChk");
+    if (c) c.checked = auto;
+  }
+  function injectSettingsRow(scope) {
+    var grid = scope.querySelector ? scope.querySelector(".set") : null;
+    if (!grid || grid.querySelector("#mtAutoRow")) return;
+    var k = document.createElement("div");
+    k.className = "k";
+    k.textContent = "オートモード";
+    var v = document.createElement("div");
+    v.id = "mtAutoRow";
+    v.innerHTML =
+      '<label class="opt"><input type="checkbox" id="mtAutoChk"> 全自動で観戦する（自席もCPU）</label>' +
+      '<div class="sub">ONの間、あなたの席も他のCPUと同じ思考で自動で打ちます。手牌は理牌されず、ツモった順のまま並びます。眺めて理牌読みの訓練に、頭の中では理牌なしで打つ訓練に。</div>';
+    grid.appendChild(k);
+    grid.appendChild(v);
+    var chk = v.querySelector("#mtAutoChk");
+    chk.checked = auto;
+    chk.addEventListener("change", function () { setAuto(chk.checked); });
+  }
+  try {
+    if (typeof MutationObserver !== "undefined" && document.body) {
+      var mo = new MutationObserver(function (muts) {
+        for (var i = 0; i < muts.length; i++) {
+          var nodes = muts[i].addedNodes;
+          for (var j = 0; j < nodes.length; j++) {
+            var node = nodes[j];
+            if (node.nodeType === 1) injectSettingsRow(node);
+          }
+        }
+      });
+      mo.observe(document.body, { childList: true, subtree: true });
+    }
+  } catch (e) {}
+
+  /* ---------- AUTO バッジ（観戦中の目印・タップで解除） ---------- */
+  var badge = null;
+  function refreshBadge() {
+    var M = mt();
+    var inGame = !!(M && M.g && M.g.players);
+    if (auto && inGame) {
+      if (!badge && document.body) {
+        badge = document.createElement("div");
+        badge.id = "mtAutoBadge";
+        badge.textContent = "AUTO観戦中（タップで解除）";
+        badge.style.cssText =
+          "position:fixed;top:calc(env(safe-area-inset-top,0px) + 8px);left:50%;transform:translateX(-50%);z-index:60;" +
+          "background:rgba(20,28,48,.88);color:#ffd76a;border:1px solid #8a6d2f;border-radius:999px;" +
+          "padding:4px 12px;font-size:12px;cursor:pointer;pointer-events:auto;";
+        badge.addEventListener("click", function () { setAuto(false); syncChk(); });
+        document.body.appendChild(badge);
+      }
+      if (badge) badge.style.display = "";
+    } else if (badge) {
+      badge.style.display = "none";
+    }
+  }
+  setInterval(refreshBadge, 500);
+
+  function setAuto(v) {
+    auto = !!v;
+    saveAuto();
+    if (!auto) { seenPend = null; seenAsk = null; }
+    refreshBadge();
+  }
+})();
+
+</script>
 </body></html>
